@@ -10,6 +10,7 @@ import type {
   CoachHintStreamChunkPayload,
   CoachHintStreamEndPayload,
   CoachHintMode,
+  TeamMessage,
 } from '@/types'
 
 export const useGameStore = defineStore('game', () => {
@@ -48,6 +49,9 @@ export const useGameStore = defineStore('game', () => {
     errorCode: null,
     errorMessage: null,
   })
+
+  const teamMessages = ref<TeamMessage[]>([])
+  const teamChatEnabled = ref(true)
 
   const myPlayer = computed(() => {
     return gameState.value.players.find(p => p.id === playerId.value)
@@ -197,6 +201,21 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function addTeamMessage(message: TeamMessage) {
+    teamMessages.value.push(message)
+    if (teamMessages.value.length > 50) {
+      teamMessages.value.shift()
+    }
+  }
+
+  function setTeamChatEnabled(enabled: boolean) {
+    teamChatEnabled.value = enabled
+  }
+
+  function clearTeamMessages() {
+    teamMessages.value = []
+  }
+
   return {
     gameState,
     messages,
@@ -210,6 +229,8 @@ export const useGameStore = defineStore('game', () => {
     currentTributeStep,
     isMyTributeTurn,
     coachHintState,
+    teamMessages,
+    teamChatEnabled,
     setGameState,
     setRoomInfo,
     addMessage,
@@ -223,5 +244,8 @@ export const useGameStore = defineStore('game', () => {
     appendCoachHintChunk,
     applyCoachHintEnd,
     resetCoachHint,
+    addTeamMessage,
+    setTeamChatEnabled,
+    clearTeamMessages,
   }
 })

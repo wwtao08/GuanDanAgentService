@@ -6,4 +6,11 @@
   --bg-color: #1a1a2e;
   --card-bg: #16213e;
   --text-color: #fff;
+  --secondary-bg: #1f3460;
+  --text-primary: #fff;
+  --text-secondary: #aaa;
+  --text-muted: #666;
+  --border-color: #333;
+  --primary-light: rgba(74, 144, 217, 0.3);
+  --ai-bg: rgba(82, 196, 26, 0.15);
 }

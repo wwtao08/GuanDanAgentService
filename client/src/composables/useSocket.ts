@@ -7,6 +7,7 @@ import type {
   CoachHintStreamChunkPayload,
   CoachHintStreamEndPayload,
   CoachHintMode,
+  TeamMessage,
 } from '@/types'
 import { gameConfig } from '@game-config'
 
@@ -107,14 +108,24 @@ export function useSocket() {
       store.applyCoachHintEnd(payload)
     })
 
+    socket.on('team-message', (message: TeamMessage) => {
+      store.addTeamMessage(message)
+    })
+
+    socket.on('team-chat-toggled', ({ enabled }: { enabled: boolean }) => {
+      store.setTeamChatEnabled(enabled)
+    })
+
     return socket
   }
 
-  function createRoom(roomId: string, playerName: string, aiDifficulty: string, mode: 'local' | 'online' = 'online') {
+  function createRoom(roomId: string, playerName: string, aiDifficulty: string, mode: 'local' | 'online' = 'online', teamChatEnabled: boolean = true) {
     return new Promise<any>((resolve) => {
-      socket?.emit('create-room', { roomId, playerName, aiDifficulty, mode }, (response: any) => {
+      socket?.emit('create-room', { roomId, playerName, aiDifficulty, mode, teamChatEnabled }, (response: any) => {
         if (response.success) {
           store.setRoomInfo(roomId, playerName, response.playerId || socket?.id || '', mode)
+          store.setTeamChatEnabled(teamChatEnabled)
+          store.clearTeamMessages()
         }
         resolve(response)
       })
@@ -213,6 +224,25 @@ export function useSocket() {
     socket?.emit('send-emoji', { roomId, emoji })
   }
 
+  function sendTeamMessage(roomId: string, message: string) {
+    return new Promise<any>((resolve) => {
+      socket?.emit('send-team-message', { roomId, message }, (response: any) => {
+        resolve(response)
+      })
+    })
+  }
+
+  function toggleTeamChat(roomId: string, enabled: boolean) {
+    return new Promise<any>((resolve) => {
+      socket?.emit('toggle-team-chat', { roomId, enabled }, (response: any) => {
+        if (response.success) {
+          store.setTeamChatEnabled(enabled)
+        }
+        resolve(response)
+      })
+    })
+  }
+
   function disconnect() {
     socket?.disconnect()
     socket = null
@@ -231,6 +261,8 @@ export function useSocket() {
     requestCoachHint,
     sendMessage,
     sendEmoji,
+    sendTeamMessage,
+    toggleTeamChat,
     disconnect
   }
 }

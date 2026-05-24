@@ -127,6 +127,7 @@ export class TeamAI {
  })),
  },
  coachMode: 'expert',
+ teamMessages: teamMsgStr || undefined,
  };
  }
  private async generateTeamMessage(selectedCards: Card[], handCards: Card[], lastPattern: CardPattern | null, position: number): Promise<string | undefined> {

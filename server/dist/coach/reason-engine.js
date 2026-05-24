@@ -246,6 +246,7 @@ export class ReasonEngine {
                 coachMode,
                 outputFormat: 'json',
                 varietySeed,
+                teamMessages: params.teamMessages,
             });
             const res = await callOpenAIChat(systemPrompt, userPrompt, timeoutMs, maxTokens, 'json');
             const raw = await res.text();
@@ -333,6 +334,7 @@ export class ReasonEngine {
                 coachMode: params.coachMode,
                 outputFormat: 'stream_plain',
                 varietySeed,
+                teamMessages: params.teamMessages,
             });
             const res = await callOpenAIChatStreamResponse(systemPrompt, userPrompt, timeoutMs, maxTokens);
             if (!res.ok) {
@@ -430,6 +432,7 @@ export class ReasonEngine {
             lastPlayedPattern: input.lastPlayedPattern,
             playedHistory: input.playedHistory,
             context: input.context,
+            teamMessages: input.teamMessages,
         });
         try {
             const res = await callOpenAIPlayRecommendation(sys, user, timeoutMs);

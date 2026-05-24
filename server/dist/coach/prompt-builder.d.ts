@@ -20,6 +20,8 @@ export declare function buildCoachUserPrompt(params: {
     outputFormat: CoachPromptOutputFormat;
     /** 每次请求不同，驱动表达角度与顺口溜聚焦，减少千篇一律 */
     varietySeed: number;
+    /** 团队消息历史 */
+    teamMessages?: string;
 }): string;
 /** 仅用于「本步出牌建议」：输出 play+cardIds 或 pass */
 export declare function buildCoachPlayRecommendationSystemPrompt(): string;
@@ -32,4 +34,5 @@ export declare function buildCoachPlayRecommendationUserPrompt(params: {
         position: number;
     }>;
     context: CoachGameContext;
+    teamMessages?: string;
 }): string;

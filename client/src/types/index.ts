@@ -154,3 +154,11 @@ export interface CoachHintState {
   errorCode: string | null
   errorMessage: string | null
 }
+
+export interface TeamMessage {
+  playerId: string
+  playerName: string
+  position: number
+  content: string
+  timestamp: number
+}

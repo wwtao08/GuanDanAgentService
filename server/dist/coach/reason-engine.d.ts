@@ -12,6 +12,7 @@ export interface GenerateCoachReasonParams {
     }>;
     context: CoachGameContext;
     coachMode: CoachHintMode;
+    teamMessages?: string;
 }
 interface ReasonResult {
     text: string;

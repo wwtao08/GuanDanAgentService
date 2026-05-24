@@ -11,7 +11,7 @@
       <button class="back-btn" @click="goHome">返回</button>
     </div>
 
-    <div class="game-area">
+    <div class="game-area" :class="{ 'with-team-chat': showTeamChat }">
       <GameBoard
         :game-state="store.gameState"
         :selected-cards="store.selectedCards"
@@ -46,6 +46,17 @@
           </div>
         </template>
       </GameBoard>
+    </div>
+
+    <div v-if="showTeamChat" class="side-panel">
+      <TeamChatPanel
+        :messages="store.teamMessages"
+        :my-player-id="store.playerId"
+        :team-chat-enabled="store.teamChatEnabled"
+        :player-ids="store.gameState.players.map(p => p.id)"
+        @send-message="handleSendTeamMessage"
+        @toggle-chat="handleToggleTeamChat"
+      />
     </div>
 
     <Teleport to="body">
@@ -126,6 +137,7 @@ import { useRoute, useRouter } from 'vue-router'
 import GameBoard from '@/components/Game/GameBoard.vue'
 import ChatWindow from '@/components/Chat/ChatWindow.vue'
 import CoachHintPanel from '@/components/Game/CoachHintPanel.vue'
+import TeamChatPanel from '@/components/Game/TeamChatPanel.vue'
 import type { Card, CoachHintMode } from '@/types'
 import { matchHandToCoachLabels } from '@/utils/coach-card-match'
 import { useSocket } from '@/composables/useSocket'
@@ -141,6 +153,8 @@ const routeRoomId = ref((route.query.room as string) || localRoomId)
 const mode = ref((route.query.mode as string) || 'local')
 const difficulty = ref((route.query.difficulty as string) || 'normal')
 const playerName = ref((route.query.name as string) || '玩家')
+const teamChatAllowed = ref(route.query.teamChat === '1' || route.query.teamChat === undefined)
+const showTeamChat = ref(teamChatAllowed.value)
 
 const currentLevel = computed(() => store.gameState.currentLevel)
 const levelRankLabel = computed(() => {
@@ -289,6 +303,28 @@ const handleSendEmoji = (emoji: string) => {
   socketApi.sendEmoji(room, emoji)
 }
 
+const handleSendTeamMessage = async (content: string) => {
+  const room = store.roomId || routeRoomId.value
+  if (!room) return
+  const result = await socketApi.sendTeamMessage(room, content)
+  if (!result?.success) {
+    store.addMessage({
+      id: Date.now().toString(),
+      playerId: 'system',
+      playerName: '系统',
+      content: result?.message || '发送团队消息失败',
+      type: 'system',
+      timestamp: Date.now()
+    })
+  }
+}
+
+const handleToggleTeamChat = async (enabled: boolean) => {
+  const room = store.roomId || routeRoomId.value
+  if (!room) return
+  await socketApi.toggleTeamChat(room, enabled)
+}
+
 onMounted(async () => {
   window.addEventListener('keydown', onCoachEscape)
   socketApi.connect()
@@ -351,6 +387,11 @@ onMounted(async () => {
   flex: 1;
   display: flex;
   min-height: 0;
+  transition: all 0.3s;
+}
+
+.game-area.with-team-chat {
+  padding-right: 290px;
 }
 
 .phase-tag {
@@ -568,5 +609,16 @@ onMounted(async () => {
 .coach-float-enter-from .coach-float-sheet,
 .coach-float-leave-to .coach-float-sheet {
   transform: translateY(12px);
+}
+
+.side-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  z-index: 10;
+  background: var(--card-bg);
+  border-left: 1px solid var(--border-color);
 }
 </style>

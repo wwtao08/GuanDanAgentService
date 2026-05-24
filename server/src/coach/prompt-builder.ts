@@ -129,8 +129,10 @@ export function buildCoachUserPrompt(params: {
   outputFormat: CoachPromptOutputFormat
   /** 每次请求不同，驱动表达角度与顺口溜聚焦，减少千篇一律 */
   varietySeed: number
+  /** 团队消息历史 */
+  teamMessages?: string
 }): string {
-  const { handCards, lastPlayedPattern, playedHistory, recommended, context, varietySeed, coachMode, outputFormat } =
+  const { handCards, lastPlayedPattern, playedHistory, recommended, context, varietySeed, coachMode, outputFormat, teamMessages } =
     params
 
   const seatInfos = context.seats.map((s) => ({
@@ -167,6 +169,11 @@ export function buildCoachUserPrompt(params: {
     '',
     '—— 本圈出牌（口语：谁出了什么；不含未公开手牌）——',
     historyLinesWithSeats(playedHistory, context.myPosition),
+    ...(teamMessages ? [
+      '',
+      '—— 团队交流（全局可见的提示信息）——',
+      teamMessages,
+    ] : []),
     '',
     '—— 我方手牌（完整列表，仅供本家）——',
     `列表：${handList}`,
@@ -235,8 +242,9 @@ export function buildCoachPlayRecommendationUserPrompt(params: {
   lastPlayedPattern: any
   playedHistory: Array<{ pattern: any; cards?: Card[]; position: number }>
   context: CoachGameContext
+  teamMessages?: string
 }): string {
-  const { handCards, lastPlayedPattern, playedHistory, context } = params
+  const { handCards, lastPlayedPattern, playedHistory, context, teamMessages } = params
   const seatInfos = context.seats.map((s) => ({
     position: s.position,
     name: s.name,
@@ -269,6 +277,11 @@ export function buildCoachPlayRecommendationUserPrompt(params: {
     '',
     '—— 本副已发生的全部出牌（按时间顺序；方位相对「本家」）——',
     fullHistoryLinesWithSeats(playedHistory, context.myPosition),
+    ...(teamMessages ? [
+      '',
+      '—— 团队交流（全局可见的提示信息，可供决策参考）——',
+      teamMessages,
+    ] : []),
     '',
     '—— 你本步必须应对的「上一手」（若首家领出则无）——',
     lastPlayedPatternDetail(lastPlayedPattern, lpIdx, context.myPosition),

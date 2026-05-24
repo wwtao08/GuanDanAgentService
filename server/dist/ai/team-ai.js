@@ -101,6 +101,7 @@ export class TeamAI {
                 })),
             },
             coachMode: 'expert',
+            teamMessages: teamMsgStr || undefined,
         };
     }
     async generateTeamMessage(selectedCards, handCards, lastPattern, position) {

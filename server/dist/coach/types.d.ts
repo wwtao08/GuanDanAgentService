@@ -57,6 +57,8 @@ export interface BuildCoachHintInput {
     context: CoachGameContext;
     /** 默认 beginner */
     coachMode?: CoachHintMode;
+    /** 团队消息历史 */
+    teamMessages?: string;
 }
 /** 流式：先下发推荐，再逐段下发思路 */
 export interface CoachHintStreamStartPayload {

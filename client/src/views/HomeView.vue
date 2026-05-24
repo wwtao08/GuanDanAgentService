@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <div class="logo">
-      <h1>惯蛋游戏</h1>
+      <h1>掼蛋游戏</h1>
       <p class="subtitle">Guandan Card Game</p>
     </div>
 
@@ -44,6 +44,13 @@
       <div class="modal-content" v-if="showCreateRoom">
         <h2>创建房间</h2>
         <input v-model="playerName" placeholder="你的昵称" />
+        <div class="setting-row">
+          <label>团队交流</label>
+          <label class="toggle-switch">
+            <input type="checkbox" v-model="enableTeamChat" />
+            <span class="slider"></span>
+          </label>
+        </div>
         <div class="modal-buttons">
           <button @click="createRoom">创建</button>
           <button @click="showCreateRoom = false" class="cancel">取消</button>
@@ -74,6 +81,7 @@ const showJoinRoom = ref(false)
 const difficulty = ref<'easy' | 'normal' | 'hard'>('normal')
 const playerName = ref('')
 const roomId = ref('')
+const enableTeamChat = ref(true)
 
 const startLocalGame = () => {
   startLocal.value = true
@@ -91,7 +99,7 @@ const createRoom = () => {
   const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase()
   router.push({
     name: 'game',
-    query: { mode: 'online', room: newRoomId, name: playerName.value || '玩家', action: 'create' }
+    query: { mode: 'online', room: newRoomId, name: playerName.value || '玩家', action: 'create', teamChat: enableTeamChat.value ? '1' : '0' }
   })
 }
 
@@ -251,5 +259,62 @@ const closeModals = () => {
 
 .modal-buttons button.cancel {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px 0;
+}
+
+.setting-row label {
+  color: #fff;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.toggle-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .slider {
+  background-color: #2196F3;
+}
+
+.toggle-switch input:checked + .slider:before {
+  transform: translateX(20px);
 }
 </style>
