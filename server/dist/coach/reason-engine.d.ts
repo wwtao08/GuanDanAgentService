@@ -40,5 +40,9 @@ export declare class ReasonEngine {
      * 由大模型推理本步出牌（或不出）；校验不通过或请求失败时返回 null，由调用方回退规则引擎。
      */
     fetchLlmPlayRecommendation(input: BuildCoachHintInput, judgeCtx: JudgeContext): Promise<CoachRecommended | null>;
+    /**
+     * 调用 LLM 生成团队消息（用于 AI 队友之间的交流）
+     */
+    callLLMForMessage(prompt: string): Promise<string | null>;
 }
 export {};

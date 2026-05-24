@@ -180,7 +180,7 @@ export function analyzePattern(cards, ctx) {
     const countsNoJokers = buildValueCounts(realNoJoker);
     const wildCount = wild.length;
     const n = cards.length;
-    /* 先判顺子/同花顺/三带二等，再判炸弹，避免与「顺子≠炸弹」的惯蛋常识冲突（同点炸弹仍会在后文命中） */
+    /* 先判顺子/同花顺/三带二等，再判炸弹，避免与「顺子≠炸弹」的掼蛋常识冲突（同点炸弹仍会在后文命中） */
     if (n >= 5 && realNoJoker.length + wild.length === n) {
         const sb = straightBombTop(cards, wild, realNoJoker);
         if (sb !== null)

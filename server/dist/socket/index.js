@@ -1,7 +1,7 @@
 import { Server as SocketServer } from 'socket.io';
 import { gameConfig } from '../config/game.js';
 import { GuandanGame } from '../game/game.js';
-import { BasicAI } from '../ai/basic.js';
+import { TeamAI } from '../ai/team-ai.js';
 import { findLegalBeatingPlay, findMinimalLegalLead } from '../ai/legal-move-fallback.js';
 import { CoachHintService } from '../coach/coach-hint-service.js';
 import { ReasonEngine } from '../coach/reason-engine.js';
@@ -49,7 +49,7 @@ export function setupSocket(io) {
     });
     socketServer.on('connection', (socket) => {
         console.log(`客户端连接: ${socket.id}`);
-        socket.on('create-room', ({ roomId, playerName, aiDifficulty, mode }, callback) => {
+        socket.on('create-room', ({ roomId, playerName, aiDifficulty, mode, teamChatEnabled }, callback) => {
             if (rooms.has(roomId)) {
                 callback({ success: false, message: '房间已存在' });
                 return;
@@ -60,6 +60,8 @@ export function setupSocket(io) {
                 sockets: new Map(),
                 aiDifficulty: aiDifficulty || 'normal',
                 mode: mode === 'online' ? 'online' : 'local',
+                teamChatEnabled: teamChatEnabled !== undefined ? teamChatEnabled : true,
+                teamMessages: [],
             };
             game.addPlayer(socket.id, playerName, false);
             room.sockets.set(socket.id, playerName);
@@ -68,7 +70,7 @@ export function setupSocket(io) {
             callback({ success: true, roomId, playerId: socket.id });
             console.log(`房间创建: ${roomId}`);
         });
-        socket.on('join-room', ({ roomId, playerName }, callback) => {
+        socket.on('join-room', ({ roomId, playerName, teamChatEnabled }, callback) => {
             const room = rooms.get(roomId);
             if (!room) {
                 callback({ success: false, message: '房间不存在' });
@@ -83,7 +85,7 @@ export function setupSocket(io) {
             socket.join(roomId);
             const state = room.game.getState();
             socketServer.to(roomId).emit('player-joined', { playerId: socket.id, playerName });
-            callback({ success: true, roomId, state, playerId: socket.id });
+            callback({ success: true, roomId, state, playerId: socket.id, teamChatEnabled: room.teamChatEnabled });
             console.log(`玩家加入: ${playerName} 加入房间 ${roomId}`);
         });
         socket.on('start-game', ({ roomId }, callback) => {
@@ -186,6 +188,47 @@ export function setupSocket(io) {
                 type: 'emoji'
             });
             callback?.({ success: true });
+        });
+        socket.on('send-team-message', ({ roomId, message }, callback) => {
+            const room = rooms.get(roomId);
+            if (!room) {
+                callback?.({ success: false, message: '房间不存在' });
+                return;
+            }
+            if (!room.teamChatEnabled) {
+                callback?.({ success: false, message: '团队聊天已关闭' });
+                return;
+            }
+            const player = room.game.getPlayer(socket.id);
+            if (!player) {
+                callback?.({ success: false, message: '玩家不存在' });
+                return;
+            }
+            const teamMessage = {
+                playerId: socket.id,
+                playerName: player.name,
+                position: player.position,
+                content: message,
+                timestamp: Date.now()
+            };
+            room.teamMessages.push(teamMessage);
+            if (room.teamMessages.length > 50) {
+                room.teamMessages = room.teamMessages.slice(-50);
+            }
+            socketServer.to(roomId).emit('team-message', teamMessage);
+            callback?.({ success: true });
+            console.log(`[team-chat] ${player.name} (位置${player.position}): ${message}`);
+        });
+        socket.on('toggle-team-chat', ({ roomId, enabled }, callback) => {
+            const room = rooms.get(roomId);
+            if (!room) {
+                callback?.({ success: false, message: '房间不存在' });
+                return;
+            }
+            room.teamChatEnabled = enabled;
+            socketServer.to(roomId).emit('team-chat-toggled', { enabled });
+            callback?.({ success: true });
+            console.log(`[team-chat] 团队聊天已${enabled ? '开启' : '关闭'}`);
         });
         socket.on('request-coach-hint', async (payload, callback) => {
             const { roomId: rawRoomId, requestId, coachMode: rawMode } = payload || {};
@@ -369,7 +412,8 @@ async function handleAITurn(roomId, io) {
     await executeAiPlayTurn(room, roomId, io);
 }
 /**
- * AI 出牌：BasicAI → 规则穷举 →（可选）与教练同源的大模型校验出牌 → 末档领出最小单张。
+ * AI 出牌：LLM → BasicAI → 规则穷举 → 末档领出最小单张。
+ * 支持团队聊天：AI 出牌时可生成提示消息给队友。
  * 仅在 playCards/pass 成功时广播，避免状态与 UI 卡在「出牌中」。
  */
 async function executeAiPlayTurn(room, roomId, io) {
@@ -409,28 +453,56 @@ async function executeAiPlayTurn(room, roomId, io) {
         io.to(roomId).emit('player-passed', { playerId, state: newState });
         scheduleNextPass();
     };
+    const emitTeamMessage = (content) => {
+        const teamMessage = {
+            playerId,
+            playerName: current.name,
+            position: turnIndex,
+            content,
+            timestamp: Date.now()
+        };
+        room.teamMessages.push(teamMessage);
+        if (room.teamMessages.length > 50) {
+            room.teamMessages = room.teamMessages.slice(-50);
+        }
+        io.to(roomId).emit('team-message', teamMessage);
+        console.log(`[team-chat] ${current.name} (位置${turnIndex}): ${content}`);
+    };
     const tryPlay = (cards) => {
         if (cards.length === 0)
             return { success: false, message: 'empty' };
         return game.playCards(playerId, cards);
     };
-    const ai = new BasicAI(game, room.aiDifficulty);
-    let chosen = ai.selectCards(current.cards, lastPattern);
+    let teamMessage;
+    const teamAI = new TeamAI(game, {
+        useLLM: true,
+        teamChatEnabled: room.teamChatEnabled
+    });
+    teamAI.setTeamMessages(room.teamMessages);
+    const aiResult = await teamAI.selectCards(current.cards, lastPattern, turnIndex);
+    teamMessage = aiResult.message;
+    let chosen = aiResult.cards;
     if (chosen.length === 0) {
         const passRes = game.pass(playerId);
         if (passRes.success) {
+            if (teamMessage && room.teamChatEnabled) {
+                emitTeamMessage(teamMessage);
+            }
             emitPassed();
             return;
         }
-        console.warn('[ai] BasicAI 选择不出但 pass 失败，进入兜底:', passRes.message);
+        console.warn('[ai] TeamAI 选择不出但 pass 失败，进入兜底:', passRes.message);
     }
     else {
         const playRes = tryPlay(chosen);
         if (playRes.success) {
+            if (teamMessage && room.teamChatEnabled) {
+                emitTeamMessage(teamMessage);
+            }
             emitCardsPlayed(chosen, playRes);
             return;
         }
-        console.warn('[ai] BasicAI 出牌未通过规则校验，进入兜底:', playRes.message);
+        console.warn('[ai] TeamAI 出牌未通过规则校验，进入兜底:', playRes.message);
     }
     const hand = game.getState().players[turnIndex]?.cards ?? current.cards;
     if (lastPattern && lastPlayerIndex !== -1) {

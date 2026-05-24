@@ -556,4 +556,37 @@ export class ReasonEngine {
     }
     return toCoachRecommendedFromCards(raw.cards, judgeCtx)
   }
+
+  /**
+   * 调用 LLM 生成团队消息（用于 AI 队友之间的交流）
+   */
+  async callLLMForMessage(prompt: string): Promise<string | null> {
+    if (!gameConfig.server.coachUseLlm || !resolveOpenAiApiKey()) return null
+
+    const timeoutMs = 10000
+    const systemPrompt = `你是一个掼蛋游戏专家，擅长与队友进行隐晦的沟通。
+你需要根据当前局势生成简短的提示消息给队友。
+消息要简短（不超过50字），隐晦但有用，避免违反规则。
+不要直接说出具体牌面。
+只输出消息内容，不要有其他文字。`
+
+    try {
+      console.log('[team-ai] 生成团队消息')
+      const res = await callOpenAIChat(systemPrompt, prompt, timeoutMs, 100, 'json')
+      const raw = await res.text()
+      if (!res.ok) {
+        console.warn('[team-ai] 消息生成 HTTP', res.status, raw.slice(0, 400))
+        return null
+      }
+      const data = JSON.parse(raw) as unknown
+      const content = extractCompletionText(data)
+      if (content && content.trim().length > 0 && content.trim().length <= 50) {
+        return content.trim()
+      }
+      return null
+    } catch (e) {
+      console.warn('[team-ai] 消息生成失败:', e)
+      return null
+    }
+  }
 }

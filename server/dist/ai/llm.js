@@ -64,7 +64,7 @@ export class LLMController {
     }
     buildPrompt(cards, lastPattern) {
         const cardStr = cards.map(c => `${c.rank}${c.suit}`).join(', ');
-        let prompt = `你正在玩惯蛋扑克游戏。
+        let prompt = `你正在玩掼蛋扑克游戏。
     
 你手上有以下牌: ${cardStr}
 

@@ -21,7 +21,7 @@ export function levelToRank(level) {
     return '2';
 }
 /**
- * 掼蛋（惯蛋）：四人、两副牌共 108 张（每副 52 张 + 小王、大王各 1 张），每人 27 张。
+ * 掼蛋：四人、两副牌共 108 张（每副 52 张 + 小王、大王各 1 张），每人 27 张。
  */
 export function createDeck() {
     const suits = ['spades', 'hearts', 'clubs', 'diamonds'];

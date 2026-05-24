@@ -17,7 +17,7 @@ export declare const RANK_ORDER: CardRank[];
 /** 升级对应的级牌（当前打几）：2～10、J、Q、K、A（14） */
 export declare function levelToRank(level: number): CardRank;
 /**
- * 掼蛋（惯蛋）：四人、两副牌共 108 张（每副 52 张 + 小王、大王各 1 张），每人 27 张。
+ * 掼蛋：四人、两副牌共 108 张（每副 52 张 + 小王、大王各 1 张），每人 27 张。
  */
 export declare function createDeck(): Card[];
 export declare function shuffleDeck(deck: Card[]): Card[];
