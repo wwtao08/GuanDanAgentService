@@ -239,16 +239,16 @@ const getSuitIcon = (card: Card) => {
 <style scoped>
 /* 同点数一列，列从左到右点数从大到小；列内纵向叠牌 */
 .hand-cards {
-  --card-w: 60px;
-  --card-h: 85px;
-  --stack-overlap: 58px;
+  --card-w: 46px;
+  --card-h: 66px;
+  --stack-overlap: 45px;
 
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-end;
-  gap: 10px;
+  gap: 6px;
   padding: 10px 10px 12px;
   touch-action: manipulation;
 }
@@ -283,11 +283,11 @@ const getSuitIcon = (card: Card) => {
 }
 
 .card-wrapper.selectable:hover:not(.selected) .card {
-  transform: translateY(-10px);
+  transform: translateY(-6px);
 }
 
 .card-wrapper.selected .card {
-  transform: translateY(-20px);
+  transform: translateY(-12px);
   box-shadow:
     0 6px 22px rgba(251, 191, 36, 0.42),
     0 2px 10px rgba(0, 0, 0, 0.28);
@@ -365,7 +365,7 @@ const getSuitIcon = (card: Card) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: bold;
   line-height: 1;
 }
@@ -375,10 +375,10 @@ const getSuitIcon = (card: Card) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 18px;
 }
 
 .suit {
-  font-size: 10px;
+  font-size: 7px;
 }
 </style>

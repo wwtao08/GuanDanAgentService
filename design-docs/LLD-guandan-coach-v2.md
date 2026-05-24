@@ -6,6 +6,8 @@
 - 团队聊天系统
 - 消息融入 AI 决策
 - 聊天开关控制
+- UI 优化
+- 教练提示优化
 
 不包含：
 - 复盘回溯（V3）
@@ -54,6 +56,22 @@
 
 5. `client/src/views/GameView.vue`（扩展）
    - 引入 `TeamChatPanel`
+   - 添加 `hasRequestedCoachHint` 状态
+   - 添加教练提示自动请求逻辑
+   - 移除 `ChatWindow` 组件
+
+6. `client/src/components/Game/HandCards.vue`（优化）
+   - 缩小卡牌尺寸
+   - 调整样式变量
+
+7. `client/src/components/Game/PlayedCards.vue`（优化）
+   - 调整出牌位置
+   - 缩小已出牌尺寸
+
+8. `client/src/components/Game/CoachHintPanel.vue`（优化）
+   - 默认教练模式改为"expert"
+   - 移除"教练提示"按钮
+   - 监听模式切换，自动请求提示
 
 ## 3. 详细接口设计（Socket）
 
@@ -242,54 +260,141 @@ flowchart TD
     H --> I[返回成功]
 ```
 
-## 7. 错误处理与日志
+### 6.3 教练提示自动请求流程
+```mermaid
+flowchart TD
+    A[用户点击教练提示] --> B[进入教练提示页面]
+    B --> C{hasRequestedCoachHint?}
+    C -->|是| D[显示已有提示]
+    C -->|否| E[自动请求 expert 模式提示]
+    E --> F[发送 request-coach-hint]
+    F --> G[接收 coach-hint]
+    G --> H[显示提示]
+    H --> I[设置 hasRequestedCoachHint=true]
+    J[切换教练模式] --> K[自动请求新模式提示]
+    L[退出教练提示页面] --> M[重置 hasRequestedCoachHint=false]
+```
 
-### 7.1 错误码
+## 7. UI 组件详细设计
+
+### 7.1 HandCards.vue 优化
+**CSS 变量调整**：
+| 变量 | 原值 | 新值 | 说明 |
+|------|------|------|------|
+| `--card-w` | 60px | 46px | 卡牌宽度 |
+| `--card-h` | 85px | 66px | 卡牌高度 |
+| `--stack-overlap` | 55px | 45px | 重叠宽度 |
+| `--font-size-lg` | 1.3rem | 1rem | 大字体 |
+| `--font-size-md` | 1rem | 0.85rem | 中字体 |
+| `--font-size-sm` | 0.9rem | 0.75rem | 小字体 |
+
+### 7.2 PlayedCards.vue 优化
+**位置调整**：
+| 位置 | 原样式 | 新样式 |
+|------|--------|--------|
+| 上方 | top: 80px | top: 65px |
+| 左侧 | left: 95px | left: 10px |
+| 右侧 | right: 95px | right: 10px |
+
+**卡牌尺寸**：
+| 属性 | 原值 | 新值 |
+|------|------|------|
+| width | 36px | 28px |
+| height | 50px | 40px |
+| font-size | 14px | 11px |
+
+### 7.3 CoachHintPanel.vue 优化
+**默认模式**：`'expert'`（原为 `'novice'`）
+
+**新增逻辑**：
+- 监听 `coachMode` 变化，自动触发 `@request` 事件
+- 移除"教练提示"按钮
+
+## 8. GameView.vue 新增逻辑
+
+### 8.1 状态变量
+```typescript
+const hasRequestedCoachHint = ref(false)
+```
+
+### 8.2 监听逻辑
+```typescript
+watch(
+  () => [showCoachHint.value, coachShell.value] as const,
+  ([newShow, newShell]) => {
+    const lock = newShow && newShell === 'coach'
+    document.body.style.overflow = lock ? 'hidden' : ''
+    
+    if (newShow && newShell === 'coach' && !hasRequestedCoachHint.value) {
+      hasRequestedCoachHint.value = true
+      handleCoachHint('expert')
+    }
+  },
+  { flush: 'post' },
+)
+
+watch(showCoachHint, (ok) => {
+  if (!ok) {
+    coachShell.value = 'hand'
+    hasRequestedCoachHint.value = false
+  }
+})
+```
+
+## 9. 错误处理与日志
+
+### 9.1 错误码
 | 错误码 | 说明 |
 |--------|------|
 | `TEAM_CHAT_DISABLED` | 团队聊天已关闭 |
 | `MESSAGE_TOO_LONG` | 消息过长 |
 | `MESSAGE_INVALID` | 消息内容无效 |
 
-### 7.2 日志记录
+### 9.2 日志记录
 - AI 出牌决策来源
 - 团队消息发送/接收
 - LLM 调用失败
+- 教练提示请求
 
-## 8. 安全性考虑
+## 10. 安全性考虑
 
-### 8.1 消息内容过滤
+### 10.1 消息内容过滤
 - 禁止包含牌面信息
 - 禁止包含攻击性语言
 - 消息长度限制
 
-### 8.2 权限控制
+### 10.2 权限控制
 - 只有房间内玩家可以发送消息
 - 只有房间创建者或管理员可以切换聊天开关
 
-## 9. 部署与集成
+## 11. 部署与集成
 
-### 9.1 依赖要求
+### 11.1 依赖要求
 - Node.js >= 18
 - Socket.io >= 4.0
 - 现有 LLM 配置
 
-### 9.2 环境变量
+### 11.2 环境变量
 无新增环境变量，复用现有配置
 
-## 10. 测试计划
+## 12. 测试计划
 
-### 10.1 单元测试
+### 12.1 单元测试
 - `TeamAI.selectCards()` - LLM 调用和回退逻辑
 - `TeamAI.generateTeamMessage()` - 消息生成
 - `ReasonEngine.callLLMForMessage()` - LLM 消息调用
 
-### 10.2 集成测试
+### 12.2 集成测试
 - 团队消息发送和接收
 - 聊天开关切换
 - AI 出牌流程
+- 教练提示自动请求
 
-### 10.3 功能测试
+### 12.3 功能测试
 - AI 使用 LLM 出牌
 - AI 自动生成团队消息
 - 消息融入 AI 决策
+- 手牌尺寸验证
+- 出牌位置验证
+- 教练提示默认模式验证
+- 教练提示自动请求验证

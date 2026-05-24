@@ -1,7 +1,7 @@
 # 掼蛋教练 V2 概要设计（HLD）
 
 ## 1. 文档目标
-基于 PRD 第二个里程碑（V2：AI LLM 出牌 + 团队聊天），给出可直接进入研发拆解的概要设计，覆盖：
+基于 PRD 第二个里程碑（V2：AI LLM 出牌 + 团队聊天 + UI优化），给出可直接进入研发拆解的概要设计，覆盖：
 - 系统边界与架构分层
 - 模块职责
 - 核心时序与数据模型
@@ -18,6 +18,14 @@
    - 消息全场可见。
 3. 团队消息融入 AI 决策过程。
 4. 聊天开关控制（默认开启）。
+5. UI 优化：
+   - 缩小手牌尺寸。
+   - 优化出牌位置。
+   - 移除普通聊天窗口。
+6. 教练提示优化：
+   - 默认高手模式。
+   - 自动请求提示。
+   - 移除提示按钮。
 
 ### 2.2 Out of Scope（不在 V2）
 1. 复盘回溯（V3）。
@@ -33,6 +41,7 @@ flowchart LR
     socketClient[useSocket]
     coachPanel[CoachHintPanel]
     teamChatPanel[TeamChatPanel]
+    playedCards[PlayedCards]
   end
 
   subgraph server [Server(Node+Socket.io)]
@@ -48,6 +57,7 @@ flowchart LR
   gameView --> gameBoard
   gameBoard --> coachPanel
   gameBoard --> teamChatPanel
+  gameBoard --> playedCards
   teamChatPanel --> socketClient
   coachPanel --> socketClient
   socketClient --> socketHandler
@@ -68,13 +78,32 @@ flowchart LR
    - 输入：团队消息列表、`teamChatEnabled` 状态。
    - 输出：触发 `send-team-message`。
 
-2. `useSocket`（扩展）
+2. `HandCards`（优化）
+   - 缩小卡牌尺寸（约 25%）。
+   - 优化字体大小和间距。
+   - 调整选中和悬停效果。
+
+3. `PlayedCards`（优化）
+   - 调整出牌位置，更靠近各自玩家。
+   - 缩小已出牌尺寸。
+
+4. `GameBoard`（优化）
+   - 调整底部手牌区域高度。
+   - 移除 ChatWindow 组件引用。
+
+5. `CoachHintPanel`（优化）
+   - 默认教练模式改为"高手"。
+   - 移除"教练提示"按钮。
+   - 监听模式切换，自动请求提示。
+
+6. `useSocket`（扩展）
    - 新增订阅：`team-message`、`team-chat-toggled`。
    - 新增发送：`send-team-message`、`toggle-team-chat`。
 
-3. `game store`（扩展）
+7. `game store`（扩展）
    - 新增 `teamMessages[]`：团队消息列表。
    - 新增 `teamChatEnabled`：聊天开关状态。
+   - 新增 `hasRequestedCoachHint`：记录是否已请求提示。
 
 ### 4.2 Server 模块
 1. `SocketEventHandler`（扩展）
@@ -147,6 +176,27 @@ sequenceDiagram
     else 聊天已禁用
         Server-->>Client: { success: false, message: "团队聊天已关闭" }
     end
+```
+
+### 5.3 教练提示自动请求时序
+```mermaid
+sequenceDiagram
+    participant User
+    participant GameView
+    participant CoachHintPanel
+    participant SocketClient
+    participant Server
+    participant CoachService
+
+    User->>GameView: 点击"教练提示"
+    GameView->>CoachHintPanel: 显示面板
+    CoachHintPanel->>CoachHintPanel: 检测到未请求提示
+    CoachHintPanel->>SocketClient: send request-coach-hint('expert')
+    SocketClient->>Server: request-coach-hint(roomId, 'expert')
+    Server->>CoachService: 生成提示
+    CoachService-->>Server: 返回提示
+    Server-->>SocketClient: coach-hint(...)
+    SocketClient-->>CoachHintPanel: 显示提示
 ```
 
 ## 6. 数据模型
@@ -233,12 +283,42 @@ interface Room {
 2. 禁止包含牌面信息（如 "A"、"K"、"炸弹" 等）。
 3. AI 生成的消息需经过内容校验。
 
-## 9. 非功能要求
+### 8.3 教练提示流程
+1. 用户点击"教练提示"按钮。
+2. 进入教练提示页面。
+3. 检测是否已请求过提示（`hasRequestedCoachHint`）。
+4. 如果未请求，自动发送 `request-coach-hint` 事件，模式为"expert"。
+5. 显示提示结果。
+6. 切换教练模式时，自动重新请求对应模式的提示。
+7. 退出教练提示页面时，重置 `hasRequestedCoachHint` 标志。
+
+## 9. UI 优化设计
+### 9.1 手牌优化
+- 卡牌宽度：60px → 46px（-23%）
+- 卡牌高度：85px → 66px（-22%）
+- 字体大小相应调整
+- 牌间距优化
+- 底部手牌区域高度：180px → 140px
+
+### 9.2 出牌位置优化
+- 上方玩家出牌：更靠近上方玩家信息
+- 左侧玩家出牌：更靠近左侧玩家信息（left: 95px → 10px）
+- 右侧玩家出牌：更靠近右侧玩家信息（right: 95px → 10px）
+
+### 9.3 聊天窗口优化
+- 移除 `ChatWindow` 组件
+- 只保留 `TeamChatPanel` 组件
+- `TeamChatPanel` 固定在右侧
+
+## 10. 非功能要求
 - 消息历史保留最近 50 条。
 - LLM 调用超时时间：10 秒。
 - 消息广播延迟 < 100ms。
+- UI 响应时间 < 100ms。
 
-## 10. 测试策略
+## 11. 测试策略
 - 单元测试：`TeamAI` 的 LLM 调用和回退逻辑。
 - 集成测试：团队消息发送和接收流程。
 - 功能测试：聊天开关控制。
+- UI 测试：手牌尺寸和出牌位置验证。
+- 教练提示测试：自动请求功能验证。

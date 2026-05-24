@@ -99,7 +99,7 @@ const getSuitIcon = (card: Card) => {
 }
 
 .position-cards.top {
-  top: 10px;
+  top: 65px;
   left: 50%;
   transform: translateX(-50%);
 }
@@ -134,14 +134,14 @@ const getSuitIcon = (card: Card) => {
 
 .card {
   position: relative;
-  width: 36px;
-  height: 50px;
+  width: 28px;
+  height: 40px;
   background: #fff;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -177,7 +177,7 @@ const getSuitIcon = (card: Card) => {
 }
 
 .card .suit {
-  font-size: 12px;
+  font-size: 9px;
   margin-left: 2px;
 }
 </style>

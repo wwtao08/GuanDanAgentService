@@ -122,12 +122,7 @@
       </button>
     </div>
 
-    <ChatWindow
-      :messages="store.messages"
-      :my-player-id="store.playerId"
-      @send-message="handleSendMessage"
-      @send-emoji="handleSendEmoji"
-    />
+
   </div>
 </template>
 
@@ -135,7 +130,6 @@
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import GameBoard from '@/components/Game/GameBoard.vue'
-import ChatWindow from '@/components/Chat/ChatWindow.vue'
 import CoachHintPanel from '@/components/Game/CoachHintPanel.vue'
 import TeamChatPanel from '@/components/Game/TeamChatPanel.vue'
 import type { Card, CoachHintMode } from '@/types'
@@ -222,18 +216,29 @@ function acceptCoachSuggestion() {
   store.replaceSelection(matched)
 }
 
-watch(showCoachHint, (ok) => {
-  if (!ok) coachShell.value = 'hand'
-})
+const hasRequestedCoachHint = ref(false)
 
 watch(
   () => [showCoachHint.value, coachShell.value] as const,
-  () => {
-    const lock = showCoachHint.value && coachShell.value === 'coach'
+  ([newShow, newShell]) => {
+    const lock = newShow && newShell === 'coach'
     document.body.style.overflow = lock ? 'hidden' : ''
+    
+    // 当进入教练提示页面且没有请求过提示时，自动请求老手提示
+    if (newShow && newShell === 'coach' && !hasRequestedCoachHint.value) {
+      hasRequestedCoachHint.value = true
+      handleCoachHint('expert')
+    }
   },
   { flush: 'post' },
 )
+
+watch(showCoachHint, (ok) => {
+  if (!ok) {
+    coachShell.value = 'hand'
+    hasRequestedCoachHint.value = false
+  }
+})
 
 function onCoachEscape(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
@@ -291,17 +296,7 @@ const handleCoachHint = (mode: CoachHintMode) => {
   socketApi.requestCoachHint(room, mode)
 }
 
-const handleSendMessage = (content: string) => {
-  const room = store.roomId || routeRoomId.value
-  if (!room) return
-  socketApi.sendMessage(room, content)
-}
 
-const handleSendEmoji = (emoji: string) => {
-  const room = store.roomId || routeRoomId.value
-  if (!room) return
-  socketApi.sendEmoji(room, emoji)
-}
 
 const handleSendTeamMessage = async (content: string) => {
   const room = store.roomId || routeRoomId.value

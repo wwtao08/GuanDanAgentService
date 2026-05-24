@@ -161,7 +161,7 @@ const handleAddToSelection = (card: Card) => {
 }
 
 .bottom-player {
-  min-height: 180px;
+  min-height: 140px;
   padding-top: 10px;
   display: flex;
   flex-direction: row;

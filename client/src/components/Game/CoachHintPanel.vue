@@ -21,9 +21,6 @@
           新手
         </button>
       </div>
-      <button class="coach-btn" :disabled="loading" @click="onRequest">
-        {{ loading ? '分析中…' : '教练提示' }}
-      </button>
     </div>
     <p class="mode-hint">
       {{ coachMode === 'expert' ? '高手：思路更短、一针见血' : '新手：讲解更全、篇幅更长' }}
@@ -59,10 +56,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { CoachHintMode, CoachRecommended } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   visible: boolean
   /** 在悬浮层内展示时：由外层容器限高，本面板不再挤占主布局 */
   floating?: boolean
@@ -78,7 +75,14 @@ const emit = defineEmits<{
   (e: 'request', mode: CoachHintMode): void
 }>()
 
-const coachMode = ref<CoachHintMode>('beginner')
+const coachMode = ref<CoachHintMode>('expert')
+
+// 监听模式变化，自动请求提示
+watch(coachMode, (newMode) => {
+  if (props.visible) {
+    emit('request', newMode)
+  }
+})
 
 function onRequest() {
   emit('request', coachMode.value)
